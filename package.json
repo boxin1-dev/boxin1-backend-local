@@ -24,7 +24,8 @@
   "dependencies": {
     "@prisma/client": "^6.13.0",
     "@prisma/extension-accelerate": "^2.0.2",
-    "express": "^5.1.0"
+    "express": "^5.1.0",
+    "typescript": "^5.9.2"
   },
   "devDependencies": {
     "@types/express": "^5.0.3",
