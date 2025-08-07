@@ -24,12 +24,24 @@
   "dependencies": {
     "@prisma/client": "^6.13.0",
     "@prisma/extension-accelerate": "^2.0.2",
+    "@types/cors": "^2.8.19",
+    "bcryptjs": "^3.0.2",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.1",
     "express": "^5.1.0",
-    "typescript": "^5.9.2"
+    "express-rate-limit": "^8.0.1",
+    "express-validator": "^7.2.1",
+    "helmet": "^8.1.0",
+    "joi": "^18.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "nodemailer": "^7.0.5",
+    "zod": "^4.0.15"
   },
   "devDependencies": {
     "@types/express": "^5.0.3",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^24.2.0",
+    "@types/nodemailer": "^6.4.17",
     "concurrently": "^9.2.0",
     "nodemon": "^3.1.10",
     "ts-node": "^10.9.2",
