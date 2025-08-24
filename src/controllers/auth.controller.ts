@@ -54,6 +54,7 @@ export class AuthController {
         message: "Connexion réussie",
         data: result,
       } as ApiResponse);
+      
     } catch (error: any) {
       res.status(401).json({
         success: false,
@@ -224,7 +225,7 @@ export class AuthController {
   getProfile = async (req: Request, res: Response) => {
     try {
       const userId = req.user?.userId;
-
+      
       if (!userId) {
         return res.status(401).json({
           success: false,
