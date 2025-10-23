@@ -1,4 +1,3 @@
-// prisma/schema.prisma
 generator client {
   provider = "prisma-client-js"
 }
@@ -9,22 +8,21 @@ datasource db {
 }
 
 model User {
-  id                String    @id @default(cuid())
-  email             String    @unique
-  password          String
-  firstName         String?
-  lastName          String?
-  isEmailVerified   Boolean   @default(false)
-  isActive          Boolean   @default(true)
-  role              Role      @default(USER)
-  lastLogin         DateTime?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-
-  // Relations
+  id                 String              @id @default(cuid())
+  email              String              @unique
+  password           String              @map("password_hash")
+  username           String?
+  firstName          String?
+  lastName           String?
+  isEmailVerified    Boolean             @default(false)
+  isActive           Boolean             @default(true)
+  role               Role                @default(USER)
+  lastLogin          DateTime?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
   emailVerifications EmailVerification[]
-  passwordResets     PasswordReset[]
   otpCodes           OtpCode[]
+  passwordResets     PasswordReset[]
   refreshTokens      RefreshToken[]
 
   @@map("users")
@@ -36,8 +34,7 @@ model EmailVerification {
   userId    String
   expiresAt DateTime
   createdAt DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("email_verifications")
 }
@@ -49,22 +46,20 @@ model PasswordReset {
   expiresAt DateTime
   used      Boolean  @default(false)
   createdAt DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("password_resets")
 }
 
 model OtpCode {
-  id        String   @id @default(cuid())
+  id        String     @id @default(cuid())
   code      String
   userId    String
   purpose   OtpPurpose
   expiresAt DateTime
-  used      Boolean  @default(false)
-  createdAt DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  used      Boolean    @default(false)
+  createdAt DateTime   @default(now())
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("otp_codes")
 }
@@ -75,10 +70,188 @@ model RefreshToken {
   userId    String
   expiresAt DateTime
   createdAt DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("refresh_tokens")
+}
+
+model automation_scenarios {
+  id                    Int                    @id @default(autoincrement())
+  name                  String                 @db.VarChar(200)
+  description           String?
+  is_active             Boolean?               @default(true)
+  trigger_type          trigger_type_enum
+  trigger_config        Json
+  actions               Json
+  conditions            Json?
+  execution_count       Int?                   @default(0)
+  last_execution        DateTime?              @db.Timestamp(6)
+  last_execution_status execution_status_enum?
+  created_by            String?                @db.VarChar(100)
+  created_at            DateTime?              @default(now()) @db.Timestamp(6)
+  updated_at            DateTime?              @default(now()) @db.Timestamp(6)
+
+  @@index([is_active], map: "idx_active")
+  @@index([trigger_type], map: "idx_trigger_type")
+}
+
+model capability_history {
+  id                   BigInt              @id @default(autoincrement())
+  device_capability_id Int
+  value                String
+  timestamp            DateTime            @db.Timestamp(6)
+  quality              quality_enum?       @default(good)
+  source               String?             @default("mqtt") @db.VarChar(100)
+  device_capabilities  device_capabilities @relation(fields: [device_capability_id], references: [id], onDelete: Cascade)
+
+  @@index([device_capability_id, timestamp(sort: Desc)], map: "idx_capability_timestamp")
+  @@index([timestamp(sort: Desc)], map: "idx_history_recent")
+  @@index([timestamp], map: "idx_timestamp")
+}
+
+model capability_types {
+  id                  Int                   @id @default(autoincrement())
+  capability_code     String                @unique @db.VarChar(50)
+  name                String                @db.VarChar(100)
+  description         String?
+  value_type          value_type_enum
+  unit                String?               @db.VarChar(20)
+  min_value           Decimal?              @db.Decimal(15, 6)
+  max_value           Decimal?              @db.Decimal(15, 6)
+  allowed_values      Json?
+  is_readable         Boolean?              @default(true)
+  is_writable         Boolean?              @default(false)
+  created_at          DateTime?             @default(now()) @db.Timestamp(6)
+  device_capabilities device_capabilities[]
+}
+
+model device_capabilities {
+  id                 Int                  @id @default(autoincrement())
+  device_id          Int
+  capability_code    String               @db.VarChar(50)
+  capability_name    String               @db.VarChar(100)
+  description        String?
+  state_topic        String               @db.VarChar(255)
+  current_value      String?
+  last_updated       DateTime?            @db.Timestamp(6)
+  is_visible         Boolean?             @default(true)
+  display_order      Int?                 @default(0)
+  created_at         DateTime?            @default(now()) @db.Timestamp(6)
+  updated_at         DateTime?            @default(now()) @db.Timestamp(6)
+  capability_type_id Int?
+  capability_history capability_history[]
+  smartbox_devices   smartbox_devices     @relation(fields: [device_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  capability_types   capability_types?    @relation(fields: [capability_type_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_device_capabilities_capability_type")
+
+  @@unique([device_id, capability_code])
+  @@index([is_visible, display_order], map: "idx_capabilities_visible")
+  @@index([capability_code], map: "idx_capability_code")
+  @@index([capability_type_id], map: "idx_device_capabilities_type_id")
+  @@index([last_updated], map: "idx_last_updated")
+}
+
+model device_commands {
+  id                   Int                  @id @default(autoincrement())
+  device_id            Int
+  capability_code      String?              @db.VarChar(50)
+  command_name         String               @db.VarChar(100)
+  command_value        String
+  status               command_status_enum? @default(pending)
+  sent_at              DateTime?            @db.Timestamp(6)
+  response_received_at DateTime?            @db.Timestamp(6)
+  response_data        Json?
+  error_message        String?
+  initiated_by         String?              @db.VarChar(100)
+  source_ip            String?              @db.Inet
+  created_at           DateTime?            @default(now()) @db.Timestamp(6)
+  smartbox_devices     smartbox_devices     @relation(fields: [device_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([created_at], map: "idx_created_at")
+  @@index([device_id, status], map: "idx_device_status")
+}
+
+model device_types {
+  id               Int                @id @default(autoincrement())
+  type_code        String             @unique @db.VarChar(50)
+  name             String             @db.VarChar(100)
+  description      String?
+  icon             String?            @db.VarChar(50)
+  created_at       DateTime?          @default(now()) @db.Timestamp(6)
+  smartbox_devices smartbox_devices[]
+}
+
+model locations {
+  id               Int                @id @default(autoincrement())
+  name             String             @db.VarChar(100)
+  description      String?
+  floor_level      Int?               @default(0)
+  area_m2          Decimal?           @db.Decimal(8, 2)
+  icon             String?            @db.VarChar(50)
+  created_at       DateTime?          @default(now()) @db.Timestamp(6)
+  smartbox_devices smartbox_devices[]
+}
+
+model smartbox_devices {
+  id                  Int                     @id @default(autoincrement())
+  device_id           String                  @unique @db.VarChar(100)
+  device_name         String                  @db.VarChar(200)
+  device_type_code    String                  @db.VarChar(50)
+  location_id         Int?
+  ip_address          String?                 @db.Inet
+  mac_address         Unsupported("macaddr")?
+  firmware_version    String?                 @db.VarChar(50)
+  manufacturer        String?                 @default("SmartBox") @db.VarChar(100)
+  discovery_topic     String                  @db.VarChar(255)
+  command_topic       String                  @db.VarChar(255)
+  status_topic        String                  @db.VarChar(255)
+  is_online           Boolean?                @default(false)
+  last_seen           DateTime?               @db.Timestamp(6)
+  last_discovery      DateTime                @db.Timestamp(6)
+  connection_quality  Int?
+  is_enabled          Boolean?                @default(true)
+  user_notes          String?
+  created_at          DateTime?               @default(now()) @db.Timestamp(6)
+  updated_at          DateTime?               @default(now()) @db.Timestamp(6)
+  device_type_id      Int?
+  device_capabilities device_capabilities[]
+  device_commands     device_commands[]
+  device_types        device_types?           @relation(fields: [device_type_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_smartbox_devices_device_type")
+  locations           locations?              @relation(fields: [location_id], references: [id], onUpdate: NoAction)
+  system_events       system_events[]
+
+  @@index([device_type_code], map: "idx_device_type")
+  @@index([is_online, location_id], map: "idx_devices_online_location")
+  @@index([last_seen], map: "idx_last_seen")
+  @@index([location_id], map: "idx_location")
+  @@index([is_online], map: "idx_online_status")
+  @@index([device_type_id], map: "idx_smartbox_devices_type_id")
+}
+
+model system_events {
+  id               BigInt            @id @default(autoincrement())
+  event_type       event_type_enum
+  device_id        Int?
+  title            String            @db.VarChar(200)
+  description      String?
+  event_data       Json?
+  severity         severity_enum?    @default(low)
+  timestamp        DateTime?         @default(now()) @db.Timestamp(6)
+  smartbox_devices smartbox_devices? @relation(fields: [device_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([device_id, timestamp(sort: Desc)], map: "idx_device_timestamp")
+  @@index([event_type], map: "idx_event_type")
+  @@index([timestamp(sort: Desc), event_type], map: "idx_events_recent")
+  @@index([severity, timestamp(sort: Desc)], map: "idx_severity_timestamp")
+}
+
+model system_settings {
+  id                   Int                @id @default(autoincrement())
+  setting_key          String             @unique @db.VarChar(100)
+  setting_value        String?
+  setting_type         setting_type_enum? @default(string)
+  description          String?
+  is_user_configurable Boolean?           @default(true)
+  updated_at           DateTime?          @default(now()) @db.Timestamp(6)
 }
 
 enum Role {
@@ -90,4 +263,82 @@ enum OtpPurpose {
   EMAIL_VERIFICATION
   PASSWORD_RESET
   LOGIN_VERIFICATION
+}
+
+enum command_status_enum {
+  pending
+  sent
+  acknowledged
+  failed
+  timeout
+}
+
+enum device_status_enum {
+  normal
+  error
+  maintenance
+  standby
+}
+
+enum door_state_enum {
+  open
+  closed
+}
+
+enum event_type_enum {
+  discovery
+  connection
+  disconnection
+  command
+  error
+  warning
+  info
+}
+
+enum execution_status_enum {
+  success
+  failed
+  partial
+}
+
+enum quality_enum {
+  good
+  bad
+  uncertain
+  timeout
+}
+
+enum setting_type_enum {
+  string
+  integer
+  boolean
+  json
+}
+
+enum severity_enum {
+  low
+  medium
+  high
+  critical
+}
+
+enum trigger_type_enum {
+  time
+  device_state
+  manual
+  webhook
+}
+
+enum user_role_enum {
+  admin
+  user
+  guest
+}
+
+enum value_type_enum {
+  boolean
+  integer
+  float
+  string
+  color
 }
