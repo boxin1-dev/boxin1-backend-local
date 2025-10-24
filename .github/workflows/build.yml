@@ -48,10 +48,10 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ secrets.DOCKERHUB_USERNAME }}/your-app-name
+          images: boxin1/boxin1-backend-local
           tags: |
-            type=sha,prefix={{branch}}-
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,prefix=main-
+            type=raw,value=latest
 
       - name: Build and push
         uses: docker/build-push-action@v5
