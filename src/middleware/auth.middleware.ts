@@ -2,7 +2,7 @@
 import { NextFunction, Request, Response } from "express";
 import { JwtPayload } from "../types/auth.types";
 import { JwtUtil } from "../utils/jwt.util";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Role } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -109,7 +109,7 @@ export const adminMiddleware = async (
         id: true,
         email: true,
         role: true,
-        is_active: true
+        isActive: true
       }
     });
 
@@ -130,7 +130,7 @@ export const adminMiddleware = async (
     }
 
     // Vérifier le rôle admin
-    if (user.role !== 'admin') {
+    if (user.role !== Role.ADMIN) {
       console.log('❌ Accès refusé - Rôle:', user.role);
       return res.status(403).json({
         success: false,
