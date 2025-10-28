@@ -6,19 +6,11 @@ RUN npm install -g pnpm
 
 COPY . .
 
-RUN pnpm install --frozen-lockfile 
+RUN pnpm install --frozen-lockfile
 
 RUN npx prisma generate
 
 RUN pnpm tsc
-
-FROM node:lts-alpine AS engine-builder
-
-WORKDIR /app
-
-COPY --chown=node:node --from=builder /app/prisma/schema.prisma ./app/prisma/
-
-RUN npx prisma generate --schema=./app/prisma/schema.prisma
 
 FROM node:lts-alpine AS runner
 
@@ -28,13 +20,19 @@ WORKDIR /app
 
 RUN npm install -g pnpm
 
+# Copier package.json et pnpm-lock.yaml
 COPY --chown=node:node --from=builder /app/package.json .
+COPY --chown=node:node --from=builder /app/pnpm-lock.yaml .
 
+# Installer TOUTES les dépendances (y compris devDependencies pour avoir prisma)
+RUN pnpm install --frozen-lockfile
+
+# Copier le code compilé et le schéma Prisma
 COPY --chown=node:node --from=builder /app/dist .
+COPY --chown=node:node --from=builder /app/prisma ./prisma
 
-RUN pnpm install --production
-
-COPY --chown=node:node --from=engine-builder  /app/node_modules/.prisma/client ./node_modules/.prisma/client
+# Régénérer le client Prisma dans l'environnement de production
+RUN npx prisma generate
 
 EXPOSE 3000
 

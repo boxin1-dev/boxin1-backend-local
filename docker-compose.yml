@@ -5,12 +5,30 @@ services:
     restart: always
     environment:
       POSTGRES_USER: admin
-      POSTGRES_PASSWORD: 123456
+      POSTGRES_PASSWORD: azerty
       POSTGRES_DB: boxin1
     ports:
-      - "5432:5432"
+      - "5434:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d boxin1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
+  app:
+    build: .
+    container_name: boxin1_cloud_service_api
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    ports:
+      - "3000:3000"
+    
 volumes:
   pgdata:
