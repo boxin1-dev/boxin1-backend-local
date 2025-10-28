@@ -121,7 +121,7 @@ export const adminMiddleware = async (
       });
     }
 
-    if (!user.is_active) {
+    if (!user.isActive) {
       console.log('❌ Compte utilisateur désactivé');
       return res.status(401).json({
         success: false,
