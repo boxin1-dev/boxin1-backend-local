@@ -470,4 +470,148 @@ router.post(
  */
 router.get("/profile", authMiddleware, authController.getProfile);
 
+// Validations pour les nouvelles routes
+const updateProfileValidation = [
+  body("firstName")
+    .optional()
+    .isLength({ min: 1, max: 50 })
+    .withMessage("Le prénom doit contenir entre 1 et 50 caractères"),
+  body("lastName")
+    .optional()
+    .isLength({ min: 1, max: 50 })
+    .withMessage("Le nom doit contenir entre 1 et 50 caractères"),
+  body("phone")
+    .optional()
+    .isLength({ min: 10, max: 20 })
+    .withMessage("Le numéro de téléphone doit contenir entre 10 et 20 caractères"),
+];
+
+const changePasswordValidation = [
+  body("currentPassword")
+    .notEmpty()
+    .withMessage("Le mot de passe actuel est requis"),
+  body("newPassword")
+    .isLength({ min: 8 })
+    .withMessage("Le nouveau mot de passe doit contenir au moins 8 caractères")
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+    .withMessage(
+      "Le nouveau mot de passe doit contenir au moins une minuscule, une majuscule et un chiffre"
+    ),
+];
+
+const deleteAccountValidation = [
+  body("password").notEmpty().withMessage("Le mot de passe est requis"),
+];
+
+/**
+ * @swagger
+ * /api/auth/profile:
+ *   patch:
+ *     summary: Mise à jour du profil utilisateur
+ *     tags: [User Profile]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               firstName:
+ *                 type: string
+ *                 example: John
+ *               lastName:
+ *                 type: string
+ *                 example: Doe
+ *               phone:
+ *                 type: string
+ *                 example: "+33612345678"
+ *     responses:
+ *       200:
+ *         description: Profil mis à jour avec succès
+ *       401:
+ *         description: Non authentifié
+ */
+router.patch(
+  "/profile",
+  authMiddleware,
+  generalLimiter,
+  updateProfileValidation,
+  authController.updateProfile
+);
+
+/**
+ * @swagger
+ * /api/auth/password:
+ *   patch:
+ *     summary: Changement de mot de passe
+ *     tags: [User Profile]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - currentPassword
+ *               - newPassword
+ *             properties:
+ *               currentPassword:
+ *                 type: string
+ *                 example: OldPassword123
+ *               newPassword:
+ *                 type: string
+ *                 minLength: 8
+ *                 example: NewPassword123
+ *     responses:
+ *       200:
+ *         description: Mot de passe changé avec succès
+ *       401:
+ *         description: Mot de passe actuel incorrect
+ */
+router.patch(
+  "/password",
+  authMiddleware,
+  authLimiter,
+  changePasswordValidation,
+  authController.changePassword
+);
+
+/**
+ * @swagger
+ * /api/auth/account:
+ *   delete:
+ *     summary: Suppression du compte utilisateur
+ *     tags: [User Profile]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - password
+ *             properties:
+ *               password:
+ *                 type: string
+ *                 example: MyPassword123
+ *     responses:
+ *       200:
+ *         description: Compte supprimé avec succès
+ *       401:
+ *         description: Mot de passe incorrect
+ */
+router.delete(
+  "/account",
+  authMiddleware,
+  authLimiter,
+  deleteAccountValidation,
+  authController.deleteAccount
+);
+
 export default router;

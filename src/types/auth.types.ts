@@ -56,3 +56,18 @@ export interface ApiResponse<T = any> {
   data?: T;
   error?: string;
 }
+
+export interface UpdateProfileRequest {
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+}
+
+export interface DeleteAccountRequest {
+  password: string;
+}

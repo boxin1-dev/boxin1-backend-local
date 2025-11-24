@@ -49,13 +49,13 @@ export class AuthController {
 
       const result = await this.authService.login(req.body);
 
-      
+
       res.json({
         success: true,
         message: "Connexion réussie",
         data: result,
       } as ApiResponse);
-      
+
     } catch (error: any) {
       res.status(401).json({
         success: false,
@@ -226,7 +226,7 @@ export class AuthController {
   getProfile = async (req: Request, res: Response) => {
     try {
       const userId = req.user?.userId;
-      
+
       if (!userId) {
         return res.status(401).json({
           success: false,
@@ -268,6 +268,110 @@ export class AuthController {
       res.status(500).json({
         success: false,
         message: "Erreur interne du serveur",
+      } as ApiResponse);
+    }
+  };
+
+  updateProfile = async (req: Request, res: Response) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          success: false,
+          message: "Données invalides",
+          errors: errors.array(),
+        });
+      }
+
+      const userId = req.user?.userId;
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          message: "Non authentifié",
+        } as ApiResponse);
+      }
+
+      const updatedUser = await this.authService.updateProfile(userId, req.body);
+
+      res.json({
+        success: true,
+        message: "Profil mis à jour avec succès",
+        data: { user: updatedUser },
+      } as ApiResponse);
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        message: error.message || "Erreur lors de la mise à jour du profil",
+      } as ApiResponse);
+    }
+  };
+
+  changePassword = async (req: Request, res: Response) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          success: false,
+          message: "Données invalides",
+          errors: errors.array(),
+        });
+      }
+
+      const userId = req.user?.userId;
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          message: "Non authentifié",
+        } as ApiResponse);
+      }
+
+      const { currentPassword, newPassword } = req.body;
+      await this.authService.changePassword(userId, currentPassword, newPassword);
+
+      res.json({
+        success: true,
+        message: "Mot de passe changé avec succès",
+      } as ApiResponse);
+    } catch (error: any) {
+      const status = error.message === "Mot de passe actuel incorrect" ? 401 : 500;
+      res.status(status).json({
+        success: false,
+        message: error.message || "Erreur lors du changement de mot de passe",
+      } as ApiResponse);
+    }
+  };
+
+  deleteAccount = async (req: Request, res: Response) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          success: false,
+          message: "Données invalides",
+          errors: errors.array(),
+        });
+      }
+
+      const userId = req.user?.userId;
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          message: "Non authentifié",
+        } as ApiResponse);
+      }
+
+      const { password } = req.body;
+      await this.authService.deleteAccount(userId, password);
+
+      res.json({
+        success: true,
+        message: "Compte supprimé avec succès",
+      } as ApiResponse);
+    } catch (error: any) {
+      const status = error.message === "Mot de passe incorrect" ? 401 : 500;
+      res.status(status).json({
+        success: false,
+        message: error.message || "Erreur lors de la suppression du compte",
       } as ApiResponse);
     }
   };

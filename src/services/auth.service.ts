@@ -267,4 +267,112 @@ export class AuthService {
 
     return token;
   }
+
+  async updateProfile(
+    userId: string,
+    data: { firstName?: string; lastName?: string; phone?: string }
+  ): Promise<{
+    id: string;
+    email: string;
+    firstName: string | null;
+    lastName: string | null;
+    phone: string | null;
+    role: string;
+    isEmailVerified: boolean;
+    lastLogin: Date | null;
+    createdAt: Date;
+  }> {
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        phone: data.phone,
+      },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        phone: true,
+        role: true,
+        isEmailVerified: true,
+        lastLogin: true,
+        createdAt: true,
+      },
+    });
+
+    return user;
+  }
+
+  async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string
+  ): Promise<void> {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new Error("Utilisateur non trouvé");
+    }
+
+    const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isPasswordValid) {
+      throw new Error("Mot de passe actuel incorrect");
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: userId },
+        data: { password: hashedPassword },
+      }),
+      // Invalider tous les refresh tokens pour forcer reconnexion
+      prisma.refreshToken.deleteMany({
+        where: { userId },
+      }),
+    ]);
+  }
+
+  async deleteAccount(userId: string, password: string): Promise<void> {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new Error("Utilisateur non trouvé");
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      throw new Error("Mot de passe incorrect");
+    }
+
+    // Supprimer toutes les données liées à l'utilisateur
+    await prisma.$transaction([
+      // Supprimer les refresh tokens
+      prisma.refreshToken.deleteMany({
+        where: { userId },
+      }),
+      // Supprimer les vérifications d'email en attente
+      prisma.emailVerification.deleteMany({
+        where: { userId },
+      }),
+      // Supprimer les demandes de reset de mot de passe
+      prisma.passwordReset.deleteMany({
+        where: { userId },
+      }),
+      // Supprimer les OTP
+      prisma.otpCode.deleteMany({
+        where: { userId },
+      }),
+      // Supprimer l'utilisateur
+      prisma.user.delete({
+        where: { id: userId },
+      }),
+    ]);
+  }
 }
