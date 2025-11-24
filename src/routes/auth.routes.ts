@@ -70,7 +70,7 @@ const authController = new AuthController();
 // Rate limiters
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // 5 tentatives par IP
+  max: 50, // 50 tentatives par IP (augmenté pour le développement)
   message: {
     success: false,
     message: "Trop de tentatives, veuillez réessayer plus tard",
@@ -79,7 +79,7 @@ const authLimiter = rateLimit({
 
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10,
+  max: 100, // 100 requêtes (augmenté pour le développement)
   message: {
     success: false,
     message: "Trop de requêtes, veuillez réessayer plus tard",
