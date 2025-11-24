@@ -195,7 +195,6 @@ model smartbox_devices {
   id                  Int                     @id @default(autoincrement())
   device_id           String                  @unique @db.VarChar(100)
   device_name         String                  @db.VarChar(200)
-  device_type_code    String                  @db.VarChar(50)
   location_id         Int?
   ip_address          String?                 @db.Inet
   mac_address         Unsupported("macaddr")?
@@ -219,7 +218,6 @@ model smartbox_devices {
   locations           locations?              @relation(fields: [location_id], references: [id], onUpdate: NoAction)
   system_events       system_events[]
 
-  @@index([device_type_code], map: "idx_device_type")
   @@index([is_online, location_id], map: "idx_devices_online_location")
   @@index([last_seen], map: "idx_last_seen")
   @@index([location_id], map: "idx_location")

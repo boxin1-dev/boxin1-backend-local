@@ -17,6 +17,8 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+    networks:
+      - n8n-network  # Ajout au réseau n8n
 
   app:
     build: .
@@ -29,6 +31,13 @@ services:
       - .env
     ports:
       - "3000:3000"
+    networks:
+      - n8n-network  # Ajout au réseau n8n
     
 volumes:
   pgdata:
+
+networks:
+  n8n-network:
+    external: true  # Utilise le réseau existant de n8n
+    name: n8n_n8n-network  # Nom exact du réseau créé par n8n

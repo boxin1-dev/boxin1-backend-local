@@ -131,14 +131,13 @@ router.post("/", authMiddleware, async (req, res) => {
       data: {
         device_id,
         device_name,
-        device_type_code,
+        device_type_id: device_type_code,
         discovery_topic,
         command_topic,
         status_topic,
         last_discovery: new Date(last_discovery),
         firmware_version: firmware_version || null,
         ip_address: ip_address || null,
-        device_type_id: device_type_id || null,
         location_id: location_id || null,
         user_notes: user_notes || null,
         manufacturer: "SmartBox",
@@ -195,15 +194,22 @@ router.post("/", authMiddleware, async (req, res) => {
  */
 router.get("/", authMiddleware, async (req, res) => {
   try {
-    const devices = await prisma.smartbox_devices.findMany();
+    const devices = await prisma.smartbox_devices.findMany({
+      orderBy: {
+        device_name: 'asc'
+      }
+    });
+    
     res.json({
       success: true,
+      count: devices.length,
       data: devices,
     });
   } catch (error: any) {
+    console.error("Erreur récupération appareils:", error);
     res.status(500).json({
       success: false,
-      message: error.message,
+      message: error.message || "Erreur interne du serveur",
     });
   }
 });
@@ -237,9 +243,22 @@ router.get("/:id", authMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
 
-    const device = await prisma.smartbox_devices.findUnique({
-      where: { device_id: id }
-    });
+    // Déterminer si l'ID est numérique ou une chaîne
+    const isNumericId = /^\d+$/.test(id);
+    
+    let device;
+    
+    if (isNumericId) {
+      // Rechercher par ID numérique
+      device = await prisma.smartbox_devices.findUnique({
+        where: { id: parseInt(id) }
+      });
+    } else {
+      // Rechercher par device_id (chaîne)
+      device = await prisma.smartbox_devices.findUnique({
+        where: { device_id: id }
+      });
+    }
 
     if (!device) {
       return res.status(404).json({
@@ -253,9 +272,10 @@ router.get("/:id", authMiddleware, async (req, res) => {
       data: device,
     });
   } catch (error: any) {
+    console.error("Erreur récupération appareil:", error);
     res.status(500).json({
       success: false,
-      message: error.message,
+      message: error.message || "Erreur interne du serveur",
     });
   }
 });
@@ -309,9 +329,15 @@ router.put("/:id", authMiddleware, async (req, res) => {
       is_enabled,
     } = req.body;
 
+    // Déterminer si l'ID est numérique ou une chaîne
+    const isNumericId = /^\d+$/.test(id);
+    const whereClause = isNumericId 
+      ? { id: parseInt(id) } 
+      : { device_id: id };
+
     // Vérifier si l'appareil existe
     const existingDevice = await prisma.smartbox_devices.findUnique({
-      where: { device_id: id }
+      where: whereClause
     });
 
     if (!existingDevice) {
@@ -321,24 +347,27 @@ router.put("/:id", authMiddleware, async (req, res) => {
       });
     }
 
+    // Construire l'objet de mise à jour uniquement avec les champs fournis
+    const updateData: any = {};
+    
+    if (device_name !== undefined) updateData.device_name = device_name;
+    if (device_type_code !== undefined) updateData.device_type_code = device_type_code;
+    if (discovery_topic !== undefined) updateData.discovery_topic = discovery_topic;
+    if (command_topic !== undefined) updateData.command_topic = command_topic;
+    if (status_topic !== undefined) updateData.status_topic = status_topic;
+    if (last_discovery !== undefined) updateData.last_discovery = new Date(last_discovery);
+    if (firmware_version !== undefined) updateData.firmware_version = firmware_version;
+    if (ip_address !== undefined) updateData.ip_address = ip_address;
+    if (device_type_id !== undefined) updateData.device_type_id = device_type_id;
+    if (location_id !== undefined) updateData.location_id = location_id;
+    if (user_notes !== undefined) updateData.user_notes = user_notes;
+    if (manufacturer !== undefined) updateData.manufacturer = manufacturer;
+    if (is_online !== undefined) updateData.is_online = is_online;
+    if (is_enabled !== undefined) updateData.is_enabled = is_enabled;
+
     const updatedDevice = await prisma.smartbox_devices.update({
-      where: { device_id: id },
-      data: {
-        device_name,
-        device_type_code,
-        discovery_topic,
-        command_topic,
-        status_topic,
-        last_discovery: last_discovery ? new Date(last_discovery) : existingDevice.last_discovery,
-        firmware_version,
-        ip_address,
-        device_type_id,
-        location_id,
-        user_notes,
-        manufacturer,
-        is_online,
-        is_enabled,
-      },
+      where: whereClause,
+      data: updateData,
     });
 
     res.json({
@@ -388,9 +417,15 @@ router.delete("/:id", authMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
 
+    // Déterminer si l'ID est numérique ou une chaîne
+    const isNumericId = /^\d+$/.test(id);
+    const whereClause = isNumericId 
+      ? { id: parseInt(id) } 
+      : { device_id: id };
+
     // Vérifier si l'appareil existe
     const existingDevice = await prisma.smartbox_devices.findUnique({
-      where: { device_id: id }
+      where: whereClause
     });
 
     if (!existingDevice) {
@@ -401,7 +436,7 @@ router.delete("/:id", authMiddleware, async (req, res) => {
     }
 
     await prisma.smartbox_devices.delete({
-      where: { device_id: id }
+      where: whereClause
     });
 
     res.json({
@@ -423,6 +458,11 @@ router.delete("/:id", authMiddleware, async (req, res) => {
       message: error.message || "Erreur interne du serveur",
     });
   }
+});
+
+// Fermer la connexion Prisma lors de l'arrêt du serveur
+process.on('beforeExit', async () => {
+  await prisma.$disconnect();
 });
 
 export default router;
