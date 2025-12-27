@@ -2,6 +2,7 @@
 import express from "express";
 import { PrismaClient } from "@prisma/client";
 import { authMiddleware } from "../middleware/auth.middleware";
+import { subscriptionMiddleware } from "../middleware/subscription.middleware";
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -85,7 +86,7 @@ const prisma = new PrismaClient();
  *       409:
  *         description: Un appareil avec cet ID existe déjà
  */
-router.post("/", authMiddleware, async (req, res) => {
+router.post("/", authMiddleware, subscriptionMiddleware, async (req, res) => {
   try {
     const {
       device_id,
@@ -153,7 +154,7 @@ router.post("/", authMiddleware, async (req, res) => {
     });
   } catch (error: any) {
     console.error("Erreur ajout appareil:", error);
-    
+
     // Gestion spécifique des erreurs Prisma
     if (error.code === 'P2002') {
       return res.status(409).json({
@@ -161,7 +162,7 @@ router.post("/", authMiddleware, async (req, res) => {
         message: "Un appareil avec cet ID existe déjà"
       });
     }
-    
+
     res.status(500).json({
       success: false,
       message: error.message || "Erreur interne du serveur",
@@ -199,7 +200,7 @@ router.get("/", authMiddleware, async (req, res) => {
         device_name: 'asc'
       }
     });
-    
+
     res.json({
       success: true,
       count: devices.length,
@@ -245,9 +246,9 @@ router.get("/:id", authMiddleware, async (req, res) => {
 
     // Déterminer si l'ID est numérique ou une chaîne
     const isNumericId = /^\d+$/.test(id);
-    
+
     let device;
-    
+
     if (isNumericId) {
       // Rechercher par ID numérique
       device = await prisma.smartbox_devices.findUnique({
@@ -309,7 +310,7 @@ router.get("/:id", authMiddleware, async (req, res) => {
  *       400:
  *         description: Données invalides
  */
-router.put("/:id", authMiddleware, async (req, res) => {
+router.put("/:id", authMiddleware, subscriptionMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
     const {
@@ -331,8 +332,8 @@ router.put("/:id", authMiddleware, async (req, res) => {
 
     // Déterminer si l'ID est numérique ou une chaîne
     const isNumericId = /^\d+$/.test(id);
-    const whereClause = isNumericId 
-      ? { id: parseInt(id) } 
+    const whereClause = isNumericId
+      ? { id: parseInt(id) }
       : { device_id: id };
 
     // Vérifier si l'appareil existe
@@ -349,7 +350,7 @@ router.put("/:id", authMiddleware, async (req, res) => {
 
     // Construire l'objet de mise à jour uniquement avec les champs fournis
     const updateData: any = {};
-    
+
     if (device_name !== undefined) updateData.device_name = device_name;
     if (device_type_code !== undefined) updateData.device_type_code = device_type_code;
     if (discovery_topic !== undefined) updateData.discovery_topic = discovery_topic;
@@ -377,14 +378,14 @@ router.put("/:id", authMiddleware, async (req, res) => {
     });
   } catch (error: any) {
     console.error("Erreur mise à jour appareil:", error);
-    
+
     if (error.code === 'P2025') {
       return res.status(404).json({
         success: false,
         message: "Appareil non trouvé"
       });
     }
-    
+
     res.status(500).json({
       success: false,
       message: error.message || "Erreur interne du serveur",
@@ -413,14 +414,14 @@ router.put("/:id", authMiddleware, async (req, res) => {
  *       404:
  *         description: Appareil non trouvé
  */
-router.delete("/:id", authMiddleware, async (req, res) => {
+router.delete("/:id", authMiddleware, subscriptionMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
 
     // Déterminer si l'ID est numérique ou une chaîne
     const isNumericId = /^\d+$/.test(id);
-    const whereClause = isNumericId 
-      ? { id: parseInt(id) } 
+    const whereClause = isNumericId
+      ? { id: parseInt(id) }
       : { device_id: id };
 
     // Vérifier si l'appareil existe
@@ -445,14 +446,14 @@ router.delete("/:id", authMiddleware, async (req, res) => {
     });
   } catch (error: any) {
     console.error("Erreur suppression appareil:", error);
-    
+
     if (error.code === 'P2025') {
       return res.status(404).json({
         success: false,
         message: "Appareil non trouvé"
       });
     }
-    
+
     res.status(500).json({
       success: false,
       message: error.message || "Erreur interne du serveur",

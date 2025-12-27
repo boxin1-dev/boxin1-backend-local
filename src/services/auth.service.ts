@@ -19,6 +19,7 @@ export class AuthService {
   private otpService = new OtpService();
 
   async register(data: RegisterRequest): Promise<AuthResponse> {
+    console.log("[AuthService] Registering user with data:", JSON.stringify(data));
     const existingUser = await prisma.user.findUnique({
       where: { email: data.email },
     });
@@ -35,6 +36,14 @@ export class AuthService {
         password: hashedPassword,
         firstName: data.firstName,
         lastName: data.lastName,
+        phone: data.phone,
+        wallet: {
+          create: {
+            balance: 0,
+            currency: "Ar",
+            isActive: true,
+          }
+        }
       },
     });
 
@@ -50,17 +59,22 @@ export class AuthService {
       },
     });
 
-    // Envoi de l'email de vérification
-    await this.emailService.sendVerificationEmail(
-      user.email,
-      verificationToken
-    );
+    // Envoi de l'email de vérification (on ne bloque pas si l'envoi échoue)
+    try {
+      await this.emailService.sendVerificationEmail(
+        user.email,
+        verificationToken
+      );
+    } catch (e) {
+      console.error("Échec de l'envoi de l'email de vérification:", e);
+    }
 
     // Génération des tokens JWT
     const accessToken = this.jwtUtil.generateAccessToken({
       userId: user.id,
       email: user.email,
       role: user.role,
+      subscriptionExpiresAt: user.subscriptionExpiresAt || undefined,
     });
 
     const refreshToken = await this.generateRefreshToken(user.id);
@@ -73,6 +87,7 @@ export class AuthService {
         lastName: user.lastName || undefined,
         role: user.role,
         isEmailVerified: user.isEmailVerified,
+        subscriptionExpiresAt: user.subscriptionExpiresAt || undefined,
       },
       accessToken,
       refreshToken,
@@ -115,6 +130,7 @@ export class AuthService {
       userId: user.id,
       email: user.email,
       role: user.role,
+      subscriptionExpiresAt: user.subscriptionExpiresAt || undefined,
     });
 
     const refreshToken = await this.generateRefreshToken(user.id);
@@ -127,6 +143,7 @@ export class AuthService {
         lastName: user.lastName || undefined,
         role: user.role,
         isEmailVerified: user.isEmailVerified,
+        subscriptionExpiresAt: user.subscriptionExpiresAt || undefined,
       },
       accessToken,
       refreshToken,

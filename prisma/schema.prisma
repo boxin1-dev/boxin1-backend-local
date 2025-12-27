@@ -21,10 +21,12 @@ model User {
   lastLogin          DateTime?
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
+  subscriptionExpiresAt DateTime?        @map("subscription_expires_at")
   emailVerifications EmailVerification[]
   otpCodes           OtpCode[]
   passwordResets     PasswordReset[]
   refreshTokens      RefreshToken[]
+  wallet             Wallet?
 
   @@map("users")
 }
@@ -330,7 +332,6 @@ enum trigger_type_enum {
 
 enum user_role_enum {
   admin
-  user
   guest
 }
 
@@ -340,4 +341,57 @@ enum value_type_enum {
   float
   string
   color
+}
+
+model Wallet {
+  id               String        @id @default(cuid())
+  userId           String        @unique
+  balance          Decimal       @default(0.00) @db.Decimal(15, 2)
+  currency         String        @default("Ar") @db.VarChar(10)
+  isActive         Boolean       @default(true)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  
+  // Relations
+  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions     Transaction[]
+
+  @@map("wallets")
+}
+
+model Transaction {
+  id               String            @id @default(cuid())
+  walletId         String
+  amount           Decimal           @db.Decimal(15, 2)
+  type             TransactionType
+  status           TransactionStatus @default(PENDING)
+  description      String?
+  reference        String?           @unique // External reference (e.g. Stripe, Mobile Money ID)
+  metadata         Json?             // Extra data
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  // Relations
+  wallet           Wallet            @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  @@index([walletId])
+  @@index([type])
+  @@index([status])
+  @@map("transactions")
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  SUBSCRIPTION_PAYMENT
+  TRANSFER_IN
+  TRANSFER_OUT
+  REFUND
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  CANCELLED
 }

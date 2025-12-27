@@ -104,6 +104,10 @@ const registerValidation = [
     .optional()
     .isLength({ min: 2, max: 50 })
     .withMessage("Le nom doit contenir entre 2 et 50 caractères"),
+  body("phone")
+    .optional()
+    .isLength({ min: 9, max: 20 })
+    .withMessage("Le numéro de téléphone doit contenir entre 10 et 20 caractères"),
 ];
 
 const loginValidation = [

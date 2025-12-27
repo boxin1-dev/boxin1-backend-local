@@ -6,6 +6,7 @@ export interface RegisterRequest {
   password: string;
   firstName?: string;
   lastName?: string;
+  phone?: string;
 }
 
 export interface LoginRequest {
@@ -39,6 +40,7 @@ export interface AuthResponse {
     lastName?: string;
     role: string;
     isEmailVerified: boolean;
+    subscriptionExpiresAt?: Date;
   };
   accessToken: string;
   refreshToken: string;
@@ -48,6 +50,7 @@ export interface JwtPayload extends JwtPayloadBase {
   userId: string;
   email: string;
   role: string;
+  subscriptionExpiresAt?: Date;
 }
 
 export interface ApiResponse<T = any> {

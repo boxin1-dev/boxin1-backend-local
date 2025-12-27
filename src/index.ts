@@ -8,7 +8,8 @@ import swaggerJsdoc from "swagger-jsdoc";
 import swaggerUi from "swagger-ui-express";
 import authRoutes from "./routes/auth.routes";
 import deviceRoutes from "./routes/device.routes";
-import { BoxClientService } from "./services/boxClient.service";
+import walletRoutes from "./routes/wallet.routes";
+// import { BoxClientService } from "./services/boxClient.service";
 
 dotenv.config();
 
@@ -96,6 +97,7 @@ app.get("/api-docs.json", (req, res) => {
 // Montage des routes
 app.use("/api/auth", authRoutes);
 app.use("/api/devices", deviceRoutes);
+app.use("/api/wallet", walletRoutes);
 
 // Health check
 app.get("/health", (req, res) => {
@@ -108,7 +110,7 @@ app.get("/health", (req, res) => {
 });
 
 //create instance for box client service
-const boxClientService = new BoxClientService();
+// const boxClientService = new BoxClientService();
 
 // Démarrage du serveur
 app.listen(PORT, async () => {
@@ -118,12 +120,14 @@ app.listen(PORT, async () => {
   console.log(`📖 Swagger JSON: http://localhost:${PORT}/api-docs.json`);
   console.log(`🏥 Health: http://localhost:${PORT}/health`);
 
+  /*
   try {
-    await boxClientService.connectToCloud();
+    // await boxClientService.connectToCloud();
   } catch (err) {
     console.error(
       "⚠️ Échec d’enregistrement du client:",
       (err as Error).message
     );
   }
+  */
 });
